@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Interactive Site Map</title>
+<style>
+  :root {
+    --bg:#0b0f14; --panel:#10161d; --text:#e8f0f7;
+    --muted:#9fb0c3; --accent:#67b7ff;
+  }
+  html, body {
+    margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family: Inter, system-ui, sans-serif; overflow:hidden;
+  }
+
+  /* Header */
+  header {
+    position:fixed; top:0; left:0; right:0; z-index:20;
+    background:#10161d; border-bottom:1px solid #1b2430;
+    padding:14px 24px; display:flex; justify-content:space-between; align-items:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.5);
+  }
+  header h1 { margin:0; font-size:20px; font-weight:700; }
+  header span { font-size:12px; color:var(--muted); }
+
+  /* Main wrapper */
+  .wrap { display:grid; grid-template-columns: 1fr auto; height:100%; margin-top:56px; }
+  .map { position:relative; overflow:hidden; }
+
+  /* Legend */
+  .legend {
+    position:absolute; right:15px; top:15px; z-index:5;
+    background:rgba(16,22,29,.9); border:1px solid #253242; border-radius:12px;
+    padding:12px 14px; font-size:13px; color:var(--muted);
+    box-shadow:0 4px 12px rgba(0,0,0,.6); animation:fadeIn .6s ease;
+  }
+  .legend strong { display:block; margin-bottom:6px; color:#cfe0f2; font-size:14px; }
+  .legend div { display:grid; grid-template-columns:14px auto; gap:8px; margin:6px 0; align-items:center; }
+  .legend .swatch { width:14px; height:14px; border-radius:4px; border:1px solid rgba(255,255,255,.35); }
+
+  /* SVG & zones */
+  svg { width:100%; height:100%; display:block; background:#000; }
+  .zone { cursor:pointer; transition:opacity .25s ease, transform .2s ease, filter .3s; }
+  .zone:hover { opacity:.9; transform:scale(1.03); filter:drop-shadow(0 0 8px var(--accent)); }
+  .label { font:600 12px Inter, sans-serif; fill:#fff; text-shadow:0 1px 2px rgba(0,0,0,.85); pointer-events:none; }
+
+  /* Side panel */
+  .panel {
+    position:fixed; top:56px; right:-450px; width:450px; height:calc(100% - 56px);
+    background:var(--panel); border-left:1px solid #253242;
+    box-shadow:-4px 0 20px rgba(0,0,0,.6); transition:right .35s ease;
+    display:flex; flex-direction:column; z-index:25;
+  }
+  .panel.open { right:0; }
+  .panel h2 { margin:16px; font-size:18px; }
+  .close { align-self:flex-end; margin:10px; padding:6px 12px; border:1px solid #2b3a4a; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
+  .close:hover { border-color:var(--accent); color:var(--accent); }
+
+  .toolbar { display:flex; gap:10px; margin:0 16px 10px; }
+  .toolbar input { flex:1; padding:8px 10px; border-radius:10px; border:1px solid #2a394a; background:#0b1117; color:#cfe0f2; }
+  .toolbar button { padding:8px 12px; border-radius:10px; border:1px solid #2a394a; background:#0b1117; color:#cfe0f2; cursor:pointer; }
+  .toolbar button:hover { border-color:var(--accent); color:var(--accent); }
+
+  .viewer { flex:1; margin:0 16px 16px; border:1px solid #253242; border-radius:12px; background:#0c1218; overflow:hidden; }
+  .viewer object { width:100%; height:100%; }
+
+  /* Animations */
+  @keyframes fadeIn { from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+
+  /* Mobile */
+  @media(max-width:768px) {
+    .panel { width:100%; right:-100%; bottom:-100%; height:60%; border-left:0; border-top:1px solid #253242; }
+    .panel.open { right:0; bottom:0; }
+    .legend { bottom:70px; top:auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Interactive Site Map</h1>
+  <span>Real-time Floorplan & Job Tracking</span>
+</header>
+<header style="background:#10161d;padding:15px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid #2b3a4a;box-shadow:0 0 15px rgba(103,183,255,0.4);">
+  <div>
+    <h1 style="margin:0;font-size:22px;color:#67b7ff;
+      text-shadow:0 0 10px #67b7ff,0 0 20px #67b7ff;">Interactive Site Map</h1>
+    <p style="margin:2px 0 0;font-size:14px;color:#9fb0c3;">Explore live floorplans & production zones</p>
+  </div>
+  <span id="todayDate" style="font-size:14px;color:#e8f0f7;"></span>
+  <div style="display:flex;gap:10px;">
+  <button onclick="saveAsPDF()" style="padding:6px 12px;border-radius:8px;
+    border:1px solid #2a394a;background:#0b1117;color:#cfe0f2;cursor:pointer;">
+    📄 Save as PDF
+  </button>
+  <button onclick="createReport()" style="padding:6px 12px;border-radius:8px;
+    border:1px solid #2a394a;background:#0b1117;color:#cfe0f2;cursor:pointer;">
+    📝 Create Report
+  </button>
+</div>
+<!-- Professional Menu Bar -->
+<nav style="background:#0c1218;border-bottom:1px solid #2b3a4a;
+  display:flex;gap:30px;align-items:center;
+  padding:10px 24px;font-size:14px;font-weight:500;
+  color:#cfe0f2;box-shadow:0 2px 6px rgba(0,0,0,0.4);">
+  
+  <a href="index.html" style="color:#cfe0f2;text-decoration:none;
+    transition:color .3s;">Home</a>
+  <a href="admin.html" style="color:#cfe0f2;text-decoration:none;
+    transition:color .3s;">Admin</a>
+  <a href="about.html" style="color:#cfe0f2;text-decoration:none;
+    transition:color .3s;">About</a>
+  <a href="contact.html" style="color:#cfe0f2;text-decoration:none;
+    transition:color .3s;">Contact</a>
+</nav>
+
+<style>
+nav a:hover { color:#67b7ff; text-shadow:0 0 6px #67b7ff; }
+</style>
+
+</header>
+
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const d = new Date();
+  document.getElementById("todayDate").textContent =
+    d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+});
+</script>
+
+<div id="app" class="wrap">
+  <div class="map">
+    <!-- Legend -->
+    <div class="legend">
+      <strong>Zones</strong>
+      <div><span class="swatch" style="background:#e74d3c66;"></span><span>Red</span></div>
+      <div><span class="swatch" style="background:#f39c1266;"></span><span>Orange</span></div>
+      <div><span class="swatch" style="background:#9b59b666;"></span><span>Purple</span></div>
+      <div><span class="swatch" style="background:#2ecc7166;"></span><span>Green</span></div>
+      <div><span class="swatch" style="background:#3498db66;"></span><span>Blue</span></div>
+      <div><span class="swatch" style="background:#ecb0e966;"></span><span>Magenta</span></div>
+      <div><span class="swatch" style="background:#ffe06666;"></span><span>Yellow</span></div>
+      <div><span class="swatch" style="background:#8e44ad66;"></span><span>Fulfillment Center</span></div>
+      <div><span class="swatch" style="background:#16a08566;"></span><span>RFC Site</span></div>
+      <div><span class="swatch" style="background:#e67e2266;"></span><span>Beamline</span></div>
+      <div><span class="swatch" style="background:#947352;"></span><span>Fabrication</span></div>
+    </div>
+<div style="position:absolute;left:15px;bottom:60px;max-width:280px;
+  background:rgba(16,22,29,0.9);border:1px solid #2b3a4a;border-radius:12px;
+  padding:10px;color:#cfe0f2;font-size:20px;box-shadow:0 0 12px rgba(103,183,255,0.5);">
+  <h3 style="margin-top:0;color:#67b7ff;">How to Use This Map</h3>
+  <p>Click any highlighted zone to open its dedicated page and view live data.  
+  Use zoom/pan to navigate the floorplan. <Strong> Please be advised any and all reporting functions are not active will update in next patch </strong></p>
+</div>
+
+    <!-- Your full SVG with all zones preserved -->
+    <svg id="site" viewBox="0 0 480 663" preserveAspectRatio="xMidYMid meet">
+      <image href="gmfsteel.png" x="0" y="0" width="480" height="663"/>
+      <!-- ALL rect + text zones from your code -->
+      <rect class="zone glow" data-zone="red" x="28" y="175" width="86" height="150"
+        fill="#e74d3c66" stroke="#e74d3c" stroke-width="3" rx="6"/>
+      <text class="label" x="40" y="225">Red Zone</text>
+
+      <rect class="zone glow" data-zone="orange" x="30" y="325" width="86" height="150"
+        fill="#f39c1266" stroke="#f39c12" stroke-width="3" rx="6"/>
+      <text class="label" x="45" y="350">Orange</text>
+
+      <rect class="zone glow" data-zone="purple" x="225" y="145" width="91" height="150"
+        fill="#9b59b666" stroke="#9b59b6" stroke-width="3" rx="6"/>
+      <text class="label" x="225" y="165">Violet</text>
+
+      <rect class="zone glow" data-zone="green" x="225" y="300" width="100" height="150"
+        fill="#2ecc7166" stroke="#2ecc71" stroke-width="3" rx="6"/>
+      <text class="label" x="280" y="344">Green</text>
+
+      <rect class="zone glow" data-zone="blue" x="285" y="483" width="43" height="99"
+        fill="#3498db66" stroke="#3498db" stroke-width="3" rx="6"/>
+      <text class="label" x="290" y="503">Blue</text>
+
+      <rect class="zone glow" data-zone="pink" x="325" y="483" width="52" height="100"
+        fill="#ecb0e966" stroke="#ecb0e9" stroke-width="3" rx="6"/>
+      <text class="label" x="330" y="525">Magenta</text>
+
+      <rect class="zone glow" data-zone="yellow" x="200" y="517" width="43" height="53"
+        fill="#ffe06666" stroke="#ffe066" stroke-width="3" rx="6"/>
+      <text class="label" x="200" y="537">Yellow</text>
+
+      <rect class="zone glow" data-zone="fulfillment" x="325" y="300" width="75" height="135"
+        fill="#8e44ad66" stroke="#8e44ad" stroke-width="3" rx="6"/>
+      <text class="label" x="325" y="350">Fulfillment</text>
+
+      <rect class="zone glow" data-zone="rfc" x="325" y="175" width="75" height="80"
+        fill="#16a08566" stroke="#16a085" stroke-width="3" rx="6"/>
+      <text class="label" x="325" y="250">RFC Site</text>
+
+      <rect class="zone glow" data-zone="beamline" x="175" y="200" width="50" height="250"
+        fill="#e67e2266" stroke="#e67e22" stroke-width="3" rx="6"/>
+      <text class="label" x="175" y="225">Beamline</text>
+
+      <rect class="zone glow" data-zone="fabrication" x="125" y="200" width="50" height="250"
+        fill="#947352" stroke="#947352" stroke-width="3" rx="6"/>
+      <text class="label" x="125" y="245">Fabrication</text>
+    </svg>
+  </div>
+
+  <!-- Slide-in Panel -->
+  <aside class="panel" id="side">
+    <button class="close" onclick="window.location.href='index.html'">✕ Close</button>
+
+    <h2 id="title">Floorplan</h2>
+    
+	<!-- NEW Export/Report Buttons -->
+<div style="display:flex;gap:10px;margin-bottom:12px;">
+  <button onclick="saveAsPDF()">📄 Save as PDF(Broken)</button>
+  <button onclick="createReport()">📝 Create Report(Broken)</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const zonePages = [
+  { name: "Red Zone", file: "RedZone.html" },
+  { name: "Orange Zone", file: "OrangeZone.html" },
+  { name: "Violet Zone", file: "VioletZone.html" },
+  { name: "Green Zone", file: "GreenZone.html" },
+  { name: "Blue Zone", file: "BlueZone.html" },
+  { name: "Pink Zone", file: "PinkZone.html" },
+  { name: "Yellow Zone", file: "YellowZone.html" },
+  { name: "Fulfillment", file: "Fullfillmentzone.html" },
+  { name: "RFC Site", file: "RFCSitezone.html" },
+  { name: "Beamline", file: "Beamlinezone.html" },
+  { name: "Fabrication", file: "Fabricationzone.html" }
+];
+
+// ---- SAVE AS PDF (choose which zones) ----
+async function saveAsPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({orientation:"landscape", unit:"px", format:"a4"});
+
+  // First page: lightweight screenshot of the map
+  const mapElement = document.querySelector(".map");
+  const canvas = await html2canvas(mapElement, { scale:0.5 });
+  const imgData = canvas.toDataURL("image/png");
+  pdf.addImage(imgData, "PNG", 10, 10, 800, 500);
+
+  // Selection prompt
+  let list = zonePages.map((z,i)=>`${i+1}. ${z.name}`).join("\n");
+  let input = prompt("Enter the numbers of the zones you want (comma separated):\n" + list);
+
+  if (input) {
+    let picks = input.split(",").map(n=>parseInt(n.trim())-1)
+                     .filter(n=>!isNaN(n) && n>=0 && n<zonePages.length);
+
+    picks.forEach((idx, i) => {
+      pdf.addPage();
+      pdf.text(`Zone Report: ${zonePages[idx].name}`, 20, 40);
+      pdf.text(`Linked file: ${zonePages[idx].file}`, 20, 60);
+    });
+  }
+
+  pdf.save("Custom_Report.pdf");
+}
+
+// ---- CREATE REPORT (everything, no questions) ----
+async function createReport() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: "a4" });
+
+  const zones = [
+    "RedZone.html","OrangeZone.html","VioletZone.html","GreenZone.html",
+    "BlueZone.html","PinkZone.html","YellowZone.html",
+    "Fullfillmentzone.html","RFCSitezone.html","Beamlinezone.html","Fabricationzone.html"
+  ];
+
+  for (let i = 0; i < zones.length; i++) {
+    const frame = document.createElement("iframe");
+    frame.style.width = "1200px";
+    frame.style.height = "800px";
+    frame.style.position = "absolute";
+    frame.style.left = "-9999px"; // keep offscreen
+    document.body.appendChild(frame);
+
+    await new Promise((resolve, reject) => {
+      frame.onload = async () => {
+        try {
+          const canvas = await html2canvas(frame.contentDocument.body, { scale: 0.6 });
+          const imgData = canvas.toDataURL("image/png");
+          if (i > 0) pdf.addPage();
+          pdf.addImage(imgData, "PNG", 10, 10, 800, 500);
+          document.body.removeChild(frame);
+          resolve();
+        } catch (err) { reject(err); }
+      };
+      frame.src = zones[i];
+    });
+  }
+
+  pdf.save("Full_Report.pdf");
+}
+</script>
+
+</script>
+
+
+
+
+    <div class="viewer">
+      <object id="viewer" type="image/svg+xml" data=""></object>
+    </div>
+    <p class="hint">Click a zone to load its HTML file.</p>
+</div>
+
+  </aside>
+</div>
+
+<script>
+const panel=document.getElementById('side');
+const viewer=document.getElementById('viewer');
+const title=document.getElementById('title');
+
+function openPanel(name,file){
+  title.textContent=name;
+  viewer.setAttribute('data',file);
+  panel.classList.add('open');
+}
+function closePanel(){ panel.classList.remove('open'); viewer.removeAttribute('data'); }
+function loadCustom(){
+  const v=document.getElementById('urlInput').value.trim();
+  if(!v) return;
+  openPanel('Custom',v);
+}
+
+// Zone click → open HTML file
+document.querySelectorAll('.zone').forEach(z=>{
+  z.addEventListener('click',()=>{
+    const id=z.dataset.zone;
+    let pageName="";
+    switch(id){
+      case "red": pageName="RedZone.html"; break;
+      case "orange": pageName="OrangeZone.html"; break;
+      case "purple": pageName="VioletZone.html"; break;
+      case "green": pageName="GreenZone.html"; break;
+      case "blue": pageName="BlueZone.html"; break;
+      case "pink": pageName="PinkZone.html"; break;
+      case "yellow": pageName="YellowZone.html"; break;
+      case "fulfillment": pageName="Fullfillmentzone.html"; break;
+      case "rfc": pageName="RFCSitezone.html"; break;
+      case "beamline": pageName="Beamlinezone.html"; break;
+      case "fabrication": pageName="Fabricationzone.html"; break;
+    }
+    if(pageName){ openPanel(id+" Zone",pageName); }
+  });
+});
+
+// Keep zoom/pan
+(function(){
+  const svg=document.getElementById('site');
+  let isPanning=false,start={x:0,y:0},viewBox=svg.viewBox.baseVal;
+  svg.addEventListener('mousedown',(e)=>{isPanning=true;start={x:e.clientX,y:e.clientY};});
+  window.addEventListener('mouseup',()=>{isPanning=false;});
+  svg.addEventListener('mousemove',(e)=>{
+    if(!isPanning)return;
+    const dx=(e.clientX-start.x)*(viewBox.width/svg.clientWidth);
+    const dy=(e.clientY-start.y)*(viewBox.height/svg.clientHeight);
+    viewBox.x-=dx; viewBox.y-=dy; start={x:e.clientX,y:e.clientY};
+  });
+  svg.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const scale=e.deltaY>0?1.1:0.9;
+    const mx=(e.offsetX/svg.clientWidth)*viewBox.width+viewBox.x;
+    const my=(e.offsetY/svg.clientHeight)*viewBox.height+viewBox.y;
+    viewBox.width*=scale; viewBox.height*=scale;
+    viewBox.x=mx-(e.offsetX/svg.clientWidth)*viewBox.width;
+    viewBox.y=my-(e.offsetY/svg.clientHeight)*viewBox.height;
+  },{passive:false});
+})();
+</script>
+</body>
+</html>
