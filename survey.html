@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GMF Steel - Survey</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --accent: #67b7ff;
+    --accent2: #1abc9c;
+    --text: #e8f0f7;
+    --muted: #9fb0c3;
+  }
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(135deg, #0b0f14 40%, #10161d 100%);
+    color: var(--text);
+  }
+  .survey-box {
+    background: rgba(16,22,29,0.96);
+    border: 1px solid #253242;
+    border-radius: 16px;
+    padding: 36px 28px;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 6px 30px rgba(103,183,255,0.12);
+  }
+  h1 { color: var(--accent); font-size: 22px; margin-bottom: 8px; }
+  p  { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  label {
+    display: block; text-align: left; font-size: 13px;
+    margin-bottom: 6px; color: var(--muted);
+  }
+  input {
+    width: 100%; padding: 10px; border-radius: 8px;
+    border: 1px solid #233241; background: #071018;
+    color: var(--text); font-size: 14px; margin-bottom: 16px;
+  }
+  input:focus { border-color: var(--accent); outline: none; }
+  button {
+    width: 100%; padding: 12px; border-radius: 8px;
+    border: none; background: var(--accent); color: #06101a;
+    font-weight: 700; cursor: pointer; transition: all 0.18s;
+  }
+  button:hover { background: var(--accent2); box-shadow: 0 6px 18px rgba(26,188,156,0.08); }
+  .msg { margin-top: 14px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="survey-box">
+    <h1>GMF Steel Survey</h1>
+    <p>Please fill out your info below:</p>
+
+    <form id="surveyForm" autocomplete="off">
+      <label for="name">Name</label>
+      <input type="text" id="name" placeholder="Enter your name" required />
+
+      <label for="pass">Pass (keyword)</label>
+      <input type="text" id="pass" placeholder="Choose a keyword for login" required />
+
+      <label for="color">Favorite Color</label>
+      <input type="text" id="color" placeholder="Enter your favorite color" required />
+
+      <button type="submit" id="submitBtn">Submit Survey</button>
+      <div id="msg" class="msg"></div>
+    </form>
+  </div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXkoreFuhj3dvASykRC5tVWYSykyAKf0e0X1v3r8G4n1m9g1oWwAqhzqLI6lFps1pb/exec"; // your working deployment
+
+const form = document.getElementById("surveyForm");
+const msg  = document.getElementById("msg");
+const btn  = document.getElementById("submitBtn");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const name  = document.getElementById("name").value.trim();
+  const pass  = document.getElementById("pass").value.trim();
+  const color = document.getElementById("color").value.trim();
+
+  if (!name || !pass || !color) {
+    msg.textContent = "Please fill out all fields.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  msg.textContent = "";
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "survey", name, pass, color })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      msg.style.color = "#1abc9c";
+      msg.textContent = "Survey submitted successfully!";
+      form.reset();
+
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1500);
+    } else {
+      msg.style.color = "#e74c3c";
+      msg.textContent = "There was an error submitting your survey.";
+    }
+  } catch (err) {
+    console.error(err);
+    msg.style.color = "#e74c3c";
+    msg.textContent = "Network error.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Submit Survey";
+  }
+});
+</script>
+</body>
+</html>

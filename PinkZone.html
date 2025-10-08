@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pink Zone Floorplan</title>
+<style>
+  :root {
+    --bg:#0b0f14; --panel:#10161d; --text:#e8f0f7;
+    --muted:#9fb0c3; --accent:#e84393; /* pink accent */
+  }
+  html, body {
+    margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+  }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; background:#1b2430; border-bottom:1px solid #2b3a4a;
+  }
+  header h1 {
+    margin:0; font-size:20px; font-weight:600;
+    text-shadow:0 0 6px rgba(232,67,147,0.7);
+  }
+  header button {
+    background:#2b3a4a; border:1px solid #445567; color:var(--text);
+    padding:6px 14px; border-radius:8px; cursor:pointer;
+    transition:all 0.3s ease;
+  }
+  header button:hover {
+    background:var(--accent); border-color:var(--accent); color:#0b0f14;
+    box-shadow:0 0 12px var(--accent); transform:scale(1.05);
+  }
+  .map { display:flex; align-items:center; justify-content:center; padding:20px; }
+  .map img {
+    width:100%; height:auto; max-height:80vh;
+    object-fit:contain; border-radius:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.6);
+  }
+  .sheet-section {
+    background:var(--panel); border-top:1px solid #2b3a4a; padding:20px;
+  }
+  .sheet-header {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
+  }
+  .sheet-header span {
+    color:var(--muted); font-size:14px; transition:color 0.3s, text-shadow 0.3s;
+  }
+  .sheet-header span:hover {
+    color:var(--accent); text-shadow:0 0 6px var(--accent);
+  }
+  .sheet-header button {
+    background:#2b3a4a; border:1px solid #445567; color:var(--text);
+    padding:6px 12px; border-radius:8px; cursor:pointer; transition:all 0.3s;
+  }
+  .sheet-header button:hover {
+    background:var(--accent); border-color:var(--accent); color:#0b0f14;
+    box-shadow:0 0 12px var(--accent); transform:scale(1.05);
+  }
+  iframe {
+    width:100%; height:500px;
+    border:1px solid #2b3a4a; border-radius:12px;
+    background:#0c1218; transition:box-shadow 0.3s;
+  }
+  iframe:hover { box-shadow:0 0 18px rgba(232,67,147,0.6); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Pink Zone Floorplan</h1>
+   
+  </header>
+
+  <div class="map">
+    <img src="pinkzone.png" alt="Pink Zone Floorplan">
+  </div>
+
+  <div class="sheet-section">
+    <div class="sheet-header">
+      <span>Auto-refreshes every 5 minutes</span>
+      <button onclick="refreshSheet()">⟳ Reload Sheet</button>
+    </div>
+    <iframe id="sheetFrame"
+      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRtQF5drtvDEFskm7wQJVxNw43QKCYDGxTwGJSOnmdAFA1zow7taXMs5EMLf4YxprNMvwXDxLjY3Q4V/pubhtml?gid=1836893054&single=true"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+<script>
+const sheetBase = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRtQF5drtvDEFskm7wQJVxNw43QKCYDGxTwGJSOnmdAFA1zow7taXMs5EMLf4YxprNMvwXDxLjY3Q4V/pubhtml?gid=1836893054&single=true";
+function refreshSheet() {
+  document.getElementById("sheetFrame").src = sheetBase + "&t=" + new Date().getTime();
+}
+refreshSheet();
+setInterval(refreshSheet, 300000);
+</script>
+</body>
+</html>
